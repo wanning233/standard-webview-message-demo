@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>标准 WebView 消息真机测试</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    body { margin:0; padding:20px 16px 40px; background:#f6f7f9; color:#202124; }
+    h1 { margin:0 0 8px; font-size:22px; }
+    .hint { margin:0 0 16px; color:#60646c; font-size:14px; line-height:1.55; }
+    .status,.log { margin:12px 0; padding:12px; border-radius:10px; background:#fff; white-space:pre-wrap; word-break:break-all; font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .grid { display:grid; gap:10px; }
+    button { width:100%; min-height:46px; border:0; border-radius:10px; padding:10px 12px; background:#1677ff; color:#fff; font-size:15px; }
+    button.secondary { background:#46505e; }
+    textarea { box-sizing:border-box; width:100%; min-height:150px; margin-top:12px; padding:10px; border:1px solid #ccd1d8; border-radius:10px; font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .ok { color:#087f23; } .bad { color:#b42318; }
+  </style>
+</head>
+<body>
+  <h1>标准 WebView 消息真机测试</h1>
+  <p class="hint">必须通过微信小程序 web-view 打开。点击发送后，再点击“返回小程序/触发交付”；微信可能在返回、销毁或分享时才把消息交给 bindmessage。</p>
+  <div id="status" class="status">正在检查微信桥接…</div>
+  <div class="grid">
+    <button onclick="sendSingle()">1. 单条 obs.echo</button>
+    <button onclick="sendMatrix()">2. 数组/无 type/重复/自定义（逐条发送 6 条）</button>
+    <button onclick="sendShare()">3. type=share</button>
+    <button onclick="sendMtlm()">4. mtlm 矩阵（逐条发送 3 条）</button>
+    <button class="secondary" onclick="sendCustom()">5. 发送下方自定义 JSON</button>
+    <button class="secondary" onclick="goBack()">6. 返回小程序/触发交付</button>
+  </div>
+  <textarea id="custom">{
+  "type": "business.custom",
+  "data": {
+    "case": "manual",
+    "index": 1
+  }
+}</textarea>
+  <div id="log" class="log">本页发送日志：</div>
+  <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+  <script>
+    var count = 0;
+    function showStatus(text, ok) {
+      var el = document.getElementById('status');
+      el.textContent = text;
+      el.className = 'status ' + (ok ? 'ok' : 'bad');
+    }
+    function log(text) {
+      count += 1;
+      document.getElementById('log').textContent += String.fromCharCode(10) + count + '. ' + text;
+    }
+    function ensureBridge() {
+      if (!window.wx || !wx.miniProgram || typeof wx.miniProgram.postMessage !== 'function') {
+        showStatus('不可用：未检测到 wx.miniProgram.postMessage。请从微信小程序 web-view 打开。', false);
+        return false;
+      }
+      return true;
+    }
+    function post(message) {
+      if (!ensureBridge()) return;
+      wx.miniProgram.postMessage({ data: message });
+      log('已调用 postMessage: ' + JSON.stringify(message));
+    }
+    function postMany(messages) {
+      messages.forEach(function (message) { post(message); });
+      alert('已逐条调用 postMessage ' + messages.length + ' 次。请返回小程序触发消息交付。');
+    }
+    function sendSingle() {
+      post({ type: 'obs.echo', data: { case: 'single', sentAt: Date.now() } });
+      alert('单条消息已发送，请返回小程序触发交付。');
+    }
+    function sendMatrix() {
+      postMany([
+        { type: 'obs.echo', data: { index: 1 } },
+        { data: { index: 2, case: 'no-type' } },
+        { type: 'obs.echo', data: { index: 3, case: 'duplicate' } },
+        { type: 'obs.echo', data: { index: 3, case: 'duplicate' } },
+        { type: 'business.custom', data: { index: 4 } },
+        { type: 'obs.report', data: { index: 5 } }
+      ]);
+    }
+    function sendShare() {
+      post({
+        type: 'share',
+        data: {
+          title: '标准容器分享测试',
+          path: '/standard-webview-mp/pages/container/index?weburl=https%3A%2F%2Fwww.meituan.com%2F'
+        }
+      });
+      alert('分享消息已发送。请用右上角“转发给朋友”触发交付并检查卡片。');
+    }
+    function sendMtlm() {
+      postMany([
+        { type: 'business.custom', mtlm: 'standard-webview-message-test' },
+        { type: 'business.custom', mtlm: 123 },
+        { type: 'business.custom', data: { mtlm: 'nested-must-not-apply' } }
+      ]);
+    }
+    function sendCustom() {
+      try {
+        post(JSON.parse(document.getElementById('custom').value));
+        alert('自定义消息已发送，请返回小程序触发交付。');
+      } catch (error) {
+        alert('JSON 无效：' + error.message);
+      }
+    }
+    function goBack() {
+      if (!ensureBridge()) return;
+      wx.miniProgram.navigateBack({ delta: 1 });
+    }
+    window.onerror = function (message, source, line) {
+      showStatus('页面脚本错误：' + message + ' @' + line, false);
+    };
+    if (window.wx && wx.miniProgram && typeof wx.miniProgram.getEnv === 'function') {
+      wx.miniProgram.getEnv(function (res) {
+        showStatus(res.miniprogram ? '桥接正常：当前位于微信小程序 web-view' : '桥接已加载，但当前不在微信小程序环境', !!res.miniprogram);
+      });
+    } else {
+      showStatus('微信 JS SDK 未提供 miniProgram API，请检查网络或打开环境。', false);
+    }
+  </script>
+</body>
+</html>
