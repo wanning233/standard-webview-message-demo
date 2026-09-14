@@ -120,6 +120,24 @@
     } else {
       showStatus('微信 JS SDK 未提供 miniProgram API，请检查网络或打开环境。', false);
     }
+
+    function showUrlParamsAlert() {
+      var params = new URLSearchParams(window.location.search);
+      var lines = [
+        '当前 H5 地址：' + window.location.origin + window.location.pathname,
+        'mina_name：' + (params.get('mina_name') || '缺失'),
+        'rcf_token：' + (params.has('rcf_token') ? '存在，长度 ' + params.get('rcf_token').length : '缺失'),
+        'rcf_uniqueid：' + (params.has('rcf_uniqueid') ? '存在，长度 ' + params.get('rcf_uniqueid').length : '缺失'),
+        'mtweb_trace_id：' + (params.get('mtweb_trace_id') || '缺失'),
+        'uuid：' + (params.has('uuid') ? '存在，长度 ' + params.get('uuid').length : '缺失'),
+        '__lxsdk_params：' + (params.has('__lxsdk_params') ? '存在，长度 ' + params.get('__lxsdk_params').length : '缺失'),
+        '旧 _lx_ver：' + (params.has('_lx_ver') ? '仍存在（失败）' : '已清理'),
+        '旧 _lx_tag：' + (params.has('_lx_tag') ? '仍存在（失败）' : '已清理'),
+        '当前 query keys：' + Array.from(params.keys()).join(', '),
+      ];
+      alert(lines.join('\\n'));
+    }
+    setTimeout(showUrlParamsAlert, 500);
   </script>
 </body>
 </html>
