@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>H5 标题覆盖结果</title>
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px;line-height:1.6}code{word-break:break-all}</style>
+</head>
+<body>
+  <h1>document.title 覆盖测试</h1>
+  <p>页面初始标题为“<code>H5 标题覆盖结果</code>”。加载 3 秒后再次设置为“<code>H5 延迟标题</code>”。</p>
+  <p>预期：容器导航栏先显示 <code>T</code>，加载后被 H5 标题覆盖。</p>
+  <p id="state"></p>
+  <script>
+    document.getElementById('state').textContent = '当前 document.title：' + document.title;
+    setTimeout(function () {
+      document.title = 'H5 延迟标题';
+      document.getElementById('state').textContent = '当前 document.title：' + document.title;
+    }, 3000);
+  </script>
+</body>
+</html>
