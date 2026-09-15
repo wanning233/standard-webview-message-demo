@@ -27,24 +27,19 @@
 
   <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
   <script>
-    var defaultMessage = {
-      type: 'h52h5',
-      data: {
-        result: 'ok',
-        source: 'page-b-default',
-        count: 1
-      }
-    };
-
-    var customMessage = {
-      type: 'h52h5',
-      customEventName: 'evt',
-      data: {
-        result: 'ok',
-        source: 'page-b-custom',
-        count: 1
-      }
-    };
+    function createMessage(useCustomEvent) {
+      var message = {
+        type: 'h52h5',
+        data: {
+          result: 'ok',
+          source: useCustomEvent ? 'page-b-custom' : 'page-b-default',
+          count: 1,
+          run_id: String(Date.now())
+        }
+      };
+      if (useCustomEvent) message.customEventName = 'evt';
+      return message;
+    }
 
     function bridgeReady() {
       return window.wx && wx.miniProgram
@@ -80,10 +75,10 @@
     }
 
     document.getElementById('send-default').addEventListener('click', function () {
-      sendAndBack(defaultMessage);
+      sendAndBack(createMessage(false));
     });
     document.getElementById('send-custom').addEventListener('click', function () {
-      sendAndBack(customMessage);
+      sendAndBack(createMessage(true));
     });
   </script>
 </body>
