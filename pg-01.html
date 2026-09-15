@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>PG-01 状态保留测试</title>
+  <style>
+    :root { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#202124; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f6f7f9; }
+    header, .controls { padding:20px 16px; }
+    h1 { margin:0 0 8px; font-size:22px; }
+    p { color:#60646c; font-size:14px; line-height:1.6; }
+    .section { display:flex; align-items:center; justify-content:center; min-height:55vh; margin:0 16px 14px; border-radius:14px; background:#fff; color:#7a808a; font-size:18px; }
+    .controls { background:#fff; border-radius:18px 18px 0 0; }
+    .bottom { margin-bottom:16px; padding:12px; border:2px solid #087f23; border-radius:10px; color:#087f23; text-align:center; font-weight:600; }
+    .row { margin:12px 0; }
+    label { display:block; margin-bottom:6px; color:#60646c; font-size:13px; }
+    input { width:100%; min-height:44px; padding:10px; border:1px solid #ccd1d8; border-radius:9px; font-size:16px; }
+    .value { padding:10px; border-radius:9px; background:#f6f7f9; white-space:pre-wrap; word-break:break-all; font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    button { width:100%; min-height:48px; margin-top:10px; border:0; border-radius:10px; padding:10px 12px; background:#1677ff; color:#fff; font-size:16px; }
+    button.secondary { background:#46505e; }
+    .ok { color:#087f23; }
+    .bad { color:#b42318; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PG-01 隐藏后返回</h1>
+    <p>入口不要带 <code>f_onShowReload</code>。向下滚动到底部，填写状态并打开 B，再返回检查本页是否保持。</p>
+  </header>
+
+  <div class="section">滚动区 1 / 3</div>
+  <div class="section">滚动区 2 / 3</div>
+  <div class="section">滚动区 3 / 3</div>
+
+  <section class="controls">
+    <div class="bottom">已到达页面底部</div>
+
+    <div class="row">
+      <label for="state-input">页面内输入值（不写入任何存储）</label>
+      <input id="state-input" value="" placeholder="请输入 PG-01-state">
+    </div>
+
+    <div class="row">
+      <label>内存计数器</label>
+      <div id="count" class="value">0</div>
+      <button id="increment" class="secondary" type="button">计数器 +1</button>
+    </div>
+
+    <div class="row">
+      <label>本次真实页面加载生成的 load_id</label>
+      <div id="load-id" class="value"></div>
+    </div>
+
+    <div class="row">
+      <label>滚动位置</label>
+      <div id="scroll-state" class="value"></div>
+    </div>
+
+    <div class="row">
+      <label>页面可见性与返回次数</label>
+      <div id="lifecycle" class="value"></div>
+    </div>
+
+    <button id="open-b" type="button">记录状态并打开页面 B</button>
+  </section>
+
+  <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+  <script>
+    var loadId = String(Date.now()) + '-' + Math.random().toString(16).slice(2, 8);
+    var count = 0;
+    var recordedScrollY = null;
+    var visibleAgainCount = 0;
+    var wasHidden = false;
+    var B_H5_URL = 'https://wanning233.github.io/standard-webview-message-demo/pg-01-b.html';
+
+    function renderCount() {
+      document.getElementById('count').textContent = String(count);
+    }
+
+    function renderScroll() {
+      var current = Math.round(window.scrollY || window.pageYOffset || 0);
+      var text = '当前 scrollY：' + current;
+      if (recordedScrollY !== null) text += '\n跳走前 scrollY：' + recordedScrollY;
+      document.getElementById('scroll-state').textContent = text;
+    }
+
+    function renderLifecycle() {
+      document.getElementById('lifecycle').textContent =
+        'visibilityState：' + document.visibilityState
+        + '\n隐藏后再次可见次数：' + visibleAgainCount;
+    }
+
+    function openB() {
+      if (!window.wx || !wx.miniProgram || typeof wx.miniProgram.navigateTo !== 'function') {
+        var lifecycle = document.getElementById('lifecycle');
+        lifecycle.textContent = '未检测到微信小程序桥接，请通过小程序 web-view 打开本页。';
+        lifecycle.className = 'value bad';
+        return;
+      }
+      recordedScrollY = Math.round(window.scrollY || window.pageYOffset || 0);
+      renderScroll();
+      var path = '/standard-webview-mp/pages/container/index'
+        + '?weburl=' + encodeURIComponent(B_H5_URL)
+        + '&__debug=1';
+      wx.miniProgram.navigateTo({
+        url: path,
+        fail: function (error) {
+          var lifecycle = document.getElementById('lifecycle');
+          lifecycle.textContent = '打开 B 失败：' + (error && error.errMsg ? error.errMsg : String(error));
+          lifecycle.className = 'value bad';
+        }
+      });
+    }
+
+    document.getElementById('load-id').textContent = loadId;
+    document.getElementById('increment').addEventListener('click', function () {
+      count += 1;
+      renderCount();
+    });
+    document.getElementById('open-b').addEventListener('click', openB);
+    window.addEventListener('scroll', renderScroll, { passive: true });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') {
+        wasHidden = true;
+      } else if (wasHidden) {
+        wasHidden = false;
+        visibleAgainCount += 1;
+      }
+      renderLifecycle();
+      renderScroll();
+    });
+    window.addEventListener('pageshow', function () {
+      renderLifecycle();
+      renderScroll();
+    });
+    renderCount();
+    renderScroll();
+    renderLifecycle();
+  </script>
+</body>
+</html>
