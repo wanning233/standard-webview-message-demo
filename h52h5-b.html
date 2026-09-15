@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>h52h5 B 页</title>
+  <style>
+    :root { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#202124; }
+    body { margin:0; padding:20px 16px 40px; background:#f6f7f9; }
+    h1 { margin:0 0 8px; font-size:22px; }
+    p { color:#60646c; font-size:14px; line-height:1.6; }
+    button { width:100%; min-height:48px; border:0; border-radius:10px; padding:10px 12px; background:#1677ff; color:#fff; font-size:16px; }
+    button:disabled { background:#9aa0a6; }
+    .card { margin:14px 0; padding:12px; border-radius:10px; background:#fff; white-space:pre-wrap; word-break:break-all; font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .ok { color:#087f23; }
+    .bad { color:#b42318; }
+  </style>
+</head>
+<body>
+  <h1>h52h5 B 页</h1>
+  <p>点击后发送事件名为 <code>evt</code> 的拍平 <code>h52h5</code> 消息，随后返回容器 A。</p>
+  <div id="status" class="card">等待发送</div>
+  <button id="send" type="button">发送 h52h5 并返回 A</button>
+
+  <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+  <script>
+    var message = {
+      type: 'h52h5',
+      customEventName: 'evt',
+      data: {
+        result: 'ok',
+        source: 'page-b',
+        count: 1
+      }
+    };
+
+    function bridgeReady() {
+      return window.wx && wx.miniProgram
+        && typeof wx.miniProgram.postMessage === 'function'
+        && typeof wx.miniProgram.navigateBack === 'function';
+    }
+
+    function sendAndBack() {
+      if (!bridgeReady()) {
+        var unavailable = document.getElementById('status');
+        unavailable.textContent = '未检测到微信小程序桥接，请通过小程序 web-view 打开本页。';
+        unavailable.className = 'card bad';
+        return;
+      }
+
+      var button = document.getElementById('send');
+      var status = document.getElementById('status');
+      button.disabled = true;
+      status.textContent = '已调用 postMessage：\n' + JSON.stringify(message, null, 2) + '\n即将返回 A…';
+      status.className = 'card ok';
+      wx.miniProgram.postMessage({ data: message });
+
+      setTimeout(function () {
+        wx.miniProgram.navigateBack({
+          delta: 1,
+          fail: function (error) {
+            button.disabled = false;
+            status.textContent = '返回失败：' + (error && error.errMsg ? error.errMsg : String(error));
+            status.className = 'card bad';
+          }
+        });
+      }, 300);
+    }
+
+    document.getElementById('send').addEventListener('click', sendAndBack);
+  </script>
+</body>
+</html>

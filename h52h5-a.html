@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>h52h5 A 页</title>
+  <style>
+    :root { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:#202124; }
+    body { margin:0; padding:20px 16px 40px; background:#f6f7f9; }
+    h1 { margin:0 0 8px; font-size:22px; }
+    p { color:#60646c; font-size:14px; line-height:1.6; }
+    button { width:100%; min-height:48px; border:0; border-radius:10px; padding:10px 12px; background:#1677ff; color:#fff; font-size:16px; }
+    .card { margin:14px 0; padding:12px; border-radius:10px; background:#fff; }
+    .label { margin-bottom:6px; color:#60646c; font-size:13px; }
+    .value { white-space:pre-wrap; word-break:break-all; font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .ok { color:#087f23; }
+    .bad { color:#b42318; }
+  </style>
+</head>
+<body>
+  <h1>h52h5 A 页</h1>
+  <p>A 容器入口必须带 <code>f_useHash=1&amp;f_customEventName=evt</code>。点击下面按钮打开容器 B，B 发消息并返回后，本页 Hash 应更新。</p>
+
+  <div class="card">
+    <div class="label">微信桥接</div>
+    <div id="bridge" class="value">检查中…</div>
+  </div>
+  <div class="card">
+    <div class="label">当前完整 URL</div>
+    <div id="href" class="value"></div>
+  </div>
+  <div class="card">
+    <div class="label">当前 location.hash</div>
+    <div id="hash" class="value"></div>
+  </div>
+
+  <button id="open" type="button">打开容器 B</button>
+
+  <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+  <script>
+    var B_H5_URL = 'https://wanning233.github.io/standard-webview-message-demo/h52h5-b.html';
+
+    function renderLocation() {
+      var hash = window.location.hash;
+      document.getElementById('href').textContent = window.location.href;
+      document.getElementById('hash').textContent = hash || '暂无 Hash';
+      document.getElementById('hash').className = 'value ' + (hash ? 'ok' : '');
+    }
+
+    function bridgeReady() {
+      return window.wx && wx.miniProgram && typeof wx.miniProgram.navigateTo === 'function';
+    }
+
+    function openB() {
+      if (!bridgeReady()) {
+        alert('未检测到微信小程序桥接，请通过小程序 web-view 打开本页。');
+        return;
+      }
+      var path = '/standard-webview-mp/pages/container/index'
+        + '?weburl=' + encodeURIComponent(B_H5_URL)
+        + '&__debug=1';
+      wx.miniProgram.navigateTo({
+        url: path,
+        fail: function (error) {
+          alert('打开容器 B 失败：' + (error && error.errMsg ? error.errMsg : String(error)));
+        }
+      });
+    }
+
+    document.getElementById('open').addEventListener('click', openB);
+    window.addEventListener('hashchange', renderLocation);
+    window.addEventListener('pageshow', renderLocation);
+    renderLocation();
+
+    if (window.wx && wx.miniProgram && typeof wx.miniProgram.getEnv === 'function') {
+      wx.miniProgram.getEnv(function (result) {
+        var element = document.getElementById('bridge');
+        element.textContent = result.miniprogram ? '正常：当前位于小程序 web-view' : '当前不在小程序环境';
+        element.className = 'value ' + (result.miniprogram ? 'ok' : 'bad');
+      });
+    } else {
+      var bridge = document.getElementById('bridge');
+      bridge.textContent = '微信 JS SDK 未提供 miniProgram API';
+      bridge.className = 'value bad';
+    }
+  </script>
+</body>
+</html>
